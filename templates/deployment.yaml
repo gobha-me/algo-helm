@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "algorand.fullname" . }}
+  labels:
+    {{- include "algorand.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "algorand.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "algorand.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      containers:
+      - name: {{ include "algorand.fullname" . }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: NETWORK
+          value: "mainnet"
+        - name: PROFILE
+          value: "participation"
+        - name: TELEMETRY_NAME
+          value: "unique_name"
+        volumeMounts:
+        - name: datavolume
+          mountPath: {{ .Values.persistence.path }}
+      volumes:
+      - name: datavolume
+        persistentVolumeClaim:
+          claimName: algorand-pvc
